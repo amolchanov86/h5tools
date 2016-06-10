@@ -35,6 +35,12 @@ class trainIndxClass:
         self.val   = self.val.flatten()
         self.test  = self.test.flatten()
 
+        #Sorting since hdf5 does not support shuffled index access
+        #i.e. all indices must be in ascending order, proably for efficient access
+        np.ndarray.sort(self.train)
+        np.ndarray.sort(self.val)
+        np.ndarray.sort(self.test)
+
 
 ## pokeHDF5load
 # loads data specific for the point of contact localization projectobject
