@@ -2,7 +2,7 @@
 
 # The module loads 2 LMDB files (containing images and by pixel labels) and saves them in a single HDF5 file
 # Arguments:
-# ./lmdb_test.py images_lmdb labels_lmdb  out_file.hdf5 [show_results]
+# ./lmdb_test.py images_lmdb labels_lmdb  out_file.hdf5 [show_results, samp_max]
 
 
 #TODO:
@@ -91,12 +91,16 @@ def main (argv):
     if len(argv) > var_i:
         show_img = int(argv[var_i])
 
+    var_i = 5
+    samp_max = -1  # maximum number of samples
+    if len(argv) > var_i:
+        samp_max = int(argv[var_i])
+
     # Parameters
     train_val_test_ratio = np.array( [0.8, 0.08, 0.12])
     #Renormalize ratios
     train_val_test_ratio /= train_val_test_ratio.sum()
 
-    samp_max = -1 #maximum number of samples
     lbl_img_scale = 50
     crossval_num = 1
 

@@ -31,6 +31,10 @@ class trainIndxClass:
         self.val = np.array(val)
         self.test = np.array(test)
 
+        self.train = self.train.flatten()
+        self.val   = self.val.flatten()
+        self.test  = self.test.flatten()
+
 
 ## pokeHDF5load
 # loads data specific for the point of contact localization projectobject
@@ -47,7 +51,6 @@ class HDF5load:
     # crossval_names - a list of all crossvalidation names
 
     ## Constructor
-    # \return number of crossvalidations found
     # \param filename path/name for the hdf5 file
     def __init__(self, filename=None):
         self.f = h5py.File(filename, "r")
@@ -68,18 +71,24 @@ class HDF5load:
                 self.f['/crossval_indx/' + indx_name + '/val'],
                 self.f['/crossval_indx/' + indx_name + '/test']))
 
-        # GEtting feature names
+        # Getting feature names
         self.getFeatLabelNames()
 
         # Creating indices and epoch objects
         # I make them np.arrays to make them mutable to be able to use references (aliases) for abstraction
         # i.e. I use self.epoch / self.nxt_index to abstract from particular container
-        self.epoch_train[0] = np.array([0])
-        self.nxt_index_train[0] = np.array([0])
-        self.epoch_val[0] = np.array([0])
-        self.nxt_index_val[0] = np.array([0])
-        self.epoch_test[0] = np.array([0])
-        self.nxt_index_test[0] = np.array([0])
+        self.epoch_train = np.array([0])
+        self.nxt_index_train = np.array([0])
+        self.epoch_end_train = np.array([0])
+        self.epoch_val = np.array([0])
+        self.nxt_index_val = np.array([0])
+        self.epoch_end_val = np.array([0])
+        self.epoch_test = np.array([0])
+        self.nxt_index_test = np.array([0])
+        self.epoch_end_test = np.array([0])
+        self.epoch_all = np.array([0])
+        self.nxt_index_all = np.array([0])
+        self.epoch_end_all = np.array([0])
 
         # Reset current internal state for batch extraction and set 0 index set
         self.setCrossval(0, mode='train')
@@ -98,16 +107,25 @@ class HDF5load:
             self.epoch = self.epoch_train
             self.nxt_index = self.nxt_index_train
             self.mode_indx = self.train_indx
+            self.epoch_end = self.epoch_end_train
         elif mode == 'val':
             self.mode_cur = mode
             self.epoch = self.epoch_val
             self.nxt_index = self.nxt_index_val
             self.mode_indx = self.val_indx
+            self.epoch_end = self.epoch_end_val
         elif mode == 'test':
             self.mode_cur = mode
             self.epoch = self.epoch_test
             self.nxt_index = self.nxt_index_test
             self.mode_indx = self.test_indx
+            self.epoch_end = self.epoch_end_test
+        elif mode == 'all':
+            self.mode_cur = mode
+            self.epoch = self.epoch_all
+            self.nxt_index = self.nxt_index_all
+            self.mode_indx = self.all_indx
+            self.epoch_end = self.epoch_end_all
 
     ## Function returns the current mode (train/val/test)
     def getMode(self):
@@ -120,11 +138,17 @@ class HDF5load:
     ## Function resets internal pointers for indices
     def resetIndx(self):
         self.epoch_train[0] = 0
+        self.epoch_end_train[0] = 0
         self.nxt_index_train[0] = 0
         self.epoch_val[0] = 0
+        self.epoch_end_val[0] = 0
         self.nxt_index_val[0] = 0
         self.epoch_test[0] = 0
         self.nxt_index_test[0] = 0
+        self.epoch_end_test[0] = 0
+        self.epoch_all[0] = 0
+        self.nxt_index_all[0] = 0
+        self.epoch_end_all[0] = 0
 
     ## Function sets crossvalidation set by indx (if provided numerical value) or name (if semantic name is known)
     def setCrossval(self, name, mode=None):
@@ -141,94 +165,113 @@ class HDF5load:
         self.train_indx = np.ndarray.astype(self.train_indx, int)
         self.val_indx   = self.crossval_indx[self.cur_crossindx].val
         self.test_indx  = self.crossval_indx[self.cur_crossindx].test
+        self.all_indx   = np.array(range(0, self.getSampNum() ))
+        self.all_indx   = self.all_indx.flatten()
 
         if mode == None:
-            setMode(self.mode_cur)
+            self.setMode(self.mode_cur)
         else:
-            setMode(mode)
+            self.setMode(mode)
+
+    ## Shuffle current indices
+    def indxShuffle(self):
+        #shuffling in-place to preserve references
+        np.random.shuffle(self.mode_indx)
+
+    ## Order current indices
+    def indxOrder(self):
+        #sorting in-place to preserve references
+        np.ndarray.sort(self.mode_indx)
+
 
     ## Get feature and label names
     def getFeatLabelNames(self):
-        self.feat_names  = self.f['/feat']
-        self.label_names = self.f['/label']
+        self.feat_names  = self.f['/feat'].keys()
+        self.label_names = self.f['/label'].keys()
         return self.feat_names, self.label_names
 
     ## Function returns features and data given set of indices
-    # the function should be overloaded in a specific class to extracself.epoch proper feature sets
+    # the function should be overloaded in a specific class to extract proper feature sets
     def getData(self, indices):
         feat  = self.f['/feat/'  + self.feat_names[0] ][indices, :]
         label = self.f['/label/' + self.label_names[0] ][indices, :]
         return feat, label
 
+    ## Recover number of samples present
+    # overload this function in case you have different dimension for indices of samples
+    def getSampNum(self):
+        # print 'Feat names = ', self.feat_names, ' type = ', type(self.feat_names)
+        feat = self.f['/feat/' + self.feat_names[0]]
+        return feat.shape[0]
+
     ## The function returns the next training batch
     def nxtBatchTrain(self, batch_size):
         start_indx = self.nxt_index_train[0]
-        end_indx = start_indx + batch_size - 1
+        end_indx = start_indx + batch_size
         epoch_changed = 0
-        if end_indx >= (self.train_indx.size - 1):
-            end_indx = self.train_indx.size - 1
+        if end_indx >= self.train_indx.size:
+            end_indx = self.train_indx.size
             self.nxt_index_train[0] = 0
             self.epoch_train[0] += 1
             epoch_changed = 1
         else:
-            self.nxt_index[0] = end_indx + 1
-        return self.getData( self.train_indx[start_indx:end_indx] ), epoch_changed
+            self.nxt_index[0] = end_indx
+        return (self.getData( self.train_indx[start_indx:end_indx] )), epoch_changed
 
     ## The function returns the next validation batch
     def nxtBatchVal(self, batch_size):
         start_indx = self.nxt_index_val[0]
-        end_indx = start_indx + batch_size - 1
+        end_indx = start_indx + batch_size
         epoch_changed = 0
-        if end_indx >= (self.val_indx.size - 1):
-            end_indx = self.val_indx.size - 1
+        if end_indx >= self.val_indx.size:
+            end_indx = self.val_indx.size
             self.nxt_index_val[0] = 0
             self.epoch_val[0] += 1
             epoch_changed = 1
         else:
-            self.nxt_index[0] = end_indx + 1
-        return self.getData( self.val_indx[start_indx:end_indx] ), epoch_changed
+            self.nxt_index[0] = end_indx
+        return (self.getData( self.val_indx[start_indx:end_indx] )), epoch_changed
 
     ## The function returns the next test batch
     def nxtBatchTest(self, batch_size):
         start_indx = self.nxt_index_test[0]
-        end_indx = start_indx + batch_size - 1
+        end_indx = start_indx + batch_size
         epoch_changed = 0
-        if end_indx >= (self.test_indx.size - 1):
-            end_indx = self.test_indx.size - 1
+        if end_indx >= self.test_indx.size:
+            end_indx = self.test_indx.size
             self.nxt_index_test[0] = 0
             self.epoch_test[0] += 1
             epoch_changed = 1
         else:
-            self.nxt_index[0] = end_indx + 1
-        return self.getData( self.test_indx[start_indx:end_indx] ), epoch_changed
+            self.nxt_index[0] = end_indx
+        return (self.getData( self.test_indx[start_indx:end_indx] )), epoch_changed
 
     ## The function returns the next training batch
     def nxtBatch(self, batch_size):
         start_indx = self.nxt_index[0]
-        end_indx = start_indx + batch_size - 1
+        end_indx = start_indx + batch_size
         epoch_changed = 0
-        if end_indx >= (self.mode_indx.size - 1):
-            end_indx = self.mode_indx.size - 1
+        if end_indx >= self.mode_indx.size:
+            end_indx = self.mode_indx.size
             self.nxt_index[0] = 0
             self.epoch[0] += 1
             epoch_changed = 1
         else:
-            self.nxt_index[0] = end_indx + 1
-        return self.getData( self.mode_indx[start_indx:end_indx] ), epoch_changed
-
-    def nxtBatch(self):
-        return self.nxtBatch(self.batch_size)
+            self.nxt_index[0] = end_indx
+        print 'start_indx = ', start_indx, ' end_indx = ', end_indx, ' epoch = ', self.epoch[0], ' epoch_changed = ', epoch_changed
+        return (self.getData( self.mode_indx[start_indx:end_indx] )), epoch_changed
 
     ## Functions to make this class iterable
     def __iter__(self):
         return self
 
     def next(self):
-        feat, label, epoch_end = self.nxtBatch()
-        if not epoch_end:
-            return feat, label
-        else:
+        if self.epoch_end[0]:
+            self.epoch_end[0] = 0
             raise StopIteration
+        feat_label, self.epoch_end[0] = self.nxtBatch(self.batch_size)
+        return feat_label[0], feat_label[1]
+
 
 
 class pokeHDF5load(HDF5load):
