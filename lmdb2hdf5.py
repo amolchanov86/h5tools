@@ -20,6 +20,7 @@ import numpy as np
 import cv2
 from caffe.proto import caffe_pb2
 import h5py
+import argparse
 
 def lmdbGetSampNum(lmdb_cursor):
     samples_num = 0
@@ -70,31 +71,42 @@ def lmdbFillDataset(lmdb_data_cursor, dset, samp_max):
         print('{},{}'.format(key, label))
 
 def main (argv):
-    # Arguments
-    var_i = 1
-    data_filename = 1
-    if len(argv) > var_i:
-        data_filename = argv[var_i]
+    parser = argparse.ArgumentParser()
+    # Required arguments: input and output files.
+    parser.add_argument(
+        "in_dir",
+        default='dataset_lmdb',
+        help="Directory with the data LMDB"
+    )
+    parser.add_argument(
+        "label_dir",
+        default='labels_lmdb',
+        help="Directory with the label LMDB"
+    )
+    parser.add_argument(
+        "out_filename",
+        default='data.h5',
+        help="HDF5 output file"
+    )
+    parser.add_argument(
+        "-v",
+        "--visualize",
+        action='store_true',
+        help="Showing images"
+    )
+    parser.add_argument(
+        "--samples_maxnum",
+        default=-1,
+        type=int,
+        help="Maximum number of samples"
+    )
+    args = parser.parse_args()
 
-    var_i = 2
-    lbl_filename = 1
-    if len(argv) > var_i:
-        lbl_filename = argv[var_i]
-
-    var_i = 3
-    h5filename = "data.hdf5"
-    if len(argv) > var_i:
-        h5filename = argv[var_i]
-
-    var_i = 4
-    show_img = 0
-    if len(argv) > var_i:
-        show_img = int(argv[var_i])
-
-    var_i = 5
-    samp_max = -1  # maximum number of samples
-    if len(argv) > var_i:
-        samp_max = int(argv[var_i])
+    data_dir = args.in_dir
+    label_dir = args.label_dir
+    h5filename = args.out_filename
+    show_img = args.visualize
+    samp_max = args.samples_maxnum
 
     # Parameters
     train_val_test_ratio = np.array( [0.8, 0.08, 0.12])
@@ -106,13 +118,13 @@ def main (argv):
 
     ###########################################################
     # Opening images
-    lmdb_data_env = lmdb.open(data_filename)
+    lmdb_data_env = lmdb.open(data_dir)
     lmdb_data_txn = lmdb_data_env.begin()
     lmdb_data_cursor = lmdb_data_txn.cursor()
     data_datum = caffe_pb2.Datum()
 
     # Opening labels
-    lmdb_lbl_env = lmdb.open(lbl_filename)
+    lmdb_lbl_env = lmdb.open(label_dir)
     lmdb_lbl_txn = lmdb_lbl_env.begin()
     lmdb_lbl_cursor = lmdb_lbl_txn.cursor()
     lbl_datum = caffe_pb2.Datum()
