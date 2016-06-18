@@ -57,7 +57,7 @@ class HDF5load:
     # crossval_names - a list of all crossvalidation names
 
     ## Constructor
-    # \param filename path/name for the hdf5 file
+    # @param filename path/name for the hdf5 file
     def __init__(self, filename=None):
         self.f = h5py.File(filename, "r")
 
@@ -203,12 +203,31 @@ class HDF5load:
         label = self.f['/label/' + self.label_names[0] ][indices, :]
         return feat, label
 
-    ## Recover number of samples present
+    ## Getting feature/label shapes
+    # there is a chance one would have to change these too in case
+    # overloaded getData would return not a numpy array
+    def getShapes(self):
+        feat_sample, label_sample = self.getData([1])
+        return feat_sample.shape, label_sample.shape
+
+    ## Recover number of samples present (overal number)
     # overload this function in case you have different dimension for indices of samples
     def getSampNum(self):
         # print 'Feat names = ', self.feat_names, ' type = ', type(self.feat_names)
         feat = self.f['/feat/' + self.feat_names[0]]
         return feat.shape[0]
+
+    ## Get training examples num
+    def getTrainSamplesNum(self):
+        return self.train_indx.size
+
+    ## Get validation examples num
+    def getValSamplesNum(self):
+        return self.val_indx.size
+
+    ## Get test examples num
+    def getTestSamplesNum(self):
+        return self.test_indx.size
 
     ## The function returns the next training batch
     def nxtBatchTrain(self, batch_size):
@@ -278,6 +297,9 @@ class HDF5load:
         feat_label, self.epoch_end[0] = self.nxtBatch(self.batch_size)
         return feat_label[0], feat_label[1]
 
+    ## Closing the internal HDF5 file
+    def close(self):
+        self.f.close()
 
 
 class pokeHDF5load(HDF5load):
@@ -285,9 +307,25 @@ class pokeHDF5load(HDF5load):
     # the function should be overloaded in a specific class to extract proper feature sets
     def getData(self, indices):
         feat  = self.f['/feat/'  + self.feat_names[0]  ][indices, :]
-        label = self.f['/label/' + self.label_names[0] ][indices, :]
+        label = self.f['/label' + self.label_names[0] ][indices, :]
         return feat, label
 
+## Class for training knowledge transfer of image segmentation
+class imgtransferHDF5load(HDF5load):
+    ## Function returns features and data given set of indices
+    # the function should be overloaded in a specific class to extract proper feature sets
+    def getData(self, indices):
+        feat  = self.f['/feat/img'][indices, :]
+        label = self.f['/label/pred_logit'][indices, :]
+        softlabel = self.f['/label/pred_t1.0'][indices, :]
+        return feat, (label,softlabel)
+
+    ## Getting feature/label shapes
+    # there is a chance one would have to change these too in case
+    # overloaded getData would return not a numpy array
+    def getShapes(self):
+        feat_sample, label_sample = self.getData([1])
+        return feat_sample.shape, label_sample[0].shape
 
 def main(argv=None):
     dataset = pokeHDF5load('poke_alldata.h5')

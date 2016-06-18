@@ -1,14 +1,6 @@
 #!/usr/bin/env python
 
 # The module loads 2 LMDB files (containing images and by pixel labels) and saves them in a single HDF5 file
-# Arguments:
-# ./lmdb_test.py images_lmdb labels_lmdb  out_file.hdf5 [show_results, samp_max]
-
-
-#TODO:
-# name of the output file as a parameter
-# make help and move to opt
-# add posibility to convert LMDB with one dimensional labels
 
 # Notes:
 # TensorFlow image dimensions order : [batch, height, width, channels]
@@ -60,14 +52,6 @@ def lmdbFillDataset(lmdb_data_cursor, dset, samp_max):
         #CxHxW to HxWxC in cv2
         image = np.transpose(data, (1,2,0))
         dset[samp_i,:,:,:] = image
-        # dset_img = dset[samp_i,:,:,:]
-        # diff_img = image - dset_img
-        # cv2.imshow('image', image)
-        # cv2.imshow('dset',  dset_img)
-        # cv2.imshow('diff', diff_img)
-        # print 'image type = ', image.dtype, ' dset type = ', dset.dtype
-        # print 'image shape = ', image.shape, ' dset shape = ', dset_img.shape
-        # cv2.waitKey(0)
         print('{},{}'.format(key, label))
 
 def main (argv):
