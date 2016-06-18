@@ -325,7 +325,7 @@ class imgtransferHDF5load(HDF5load):
     # overloaded getData would return not a numpy array
     def getShapes(self):
         feat_sample, label_sample = self.getData([1])
-        return feat_sample.shape, label_sample[0].shape
+        return feat_sample.shape, label_sample[0].shape, label_sample[1].shape
 
 def main(argv=None):
     dataset = pokeHDF5load('poke_alldata.h5')
