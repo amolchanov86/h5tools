@@ -307,7 +307,7 @@ class pokeHDF5load(HDF5load):
     # the function should be overloaded in a specific class to extract proper feature sets
     def getData(self, indices):
         feat  = self.f['/feat/'  + self.feat_names[0]  ][indices, :]
-        label = self.f['/label' + self.label_names[0] ][indices, :]
+        label = self.f['/label/' + self.label_names[0] ][indices, :]
         return feat, label
 
 ## Class for training knowledge transfer of image segmentation
@@ -316,8 +316,8 @@ class imgtransferHDF5load(HDF5load):
     # the function should be overloaded in a specific class to extract proper feature sets
     def getData(self, indices):
         feat  = self.f['/feat/img'][indices, :]
-        label = self.f['/label/pred_logit'][indices, :]
-        softlabel = self.f['/label/pred_t1.0'][indices, :]
+        label = self.f['/label/hardlabel'][indices, :]
+        softlabel = self.f['/label/softlabel'][indices, :]
         return feat, (label,softlabel)
 
     ## Getting feature/label shapes
