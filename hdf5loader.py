@@ -320,10 +320,11 @@ class imgtransferHDF5load(HDF5load):
         label = self.f['/label/hardlabel'][indices, :]
         softlabel = self.f['/label/softlabel'][indices, :]
 
-        if len(indices) == 1:
+        if len(feat.shape) < 4:
             feat = np.expand_dims(feat, axis=0)
             label = np.expand_dims(label, axis=0)
             softlabel = np.expand_dims(softlabel, axis=0)
+            # print 'Indices = ', indices, ' Shapes = ', feat.shape, label.shape, softlabel.shape
 
         return feat, (label,softlabel)
 
