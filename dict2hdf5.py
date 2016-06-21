@@ -47,9 +47,14 @@ class dict2h5(object):
             # save dictionaries
             elif isinstance(item, dict):
                 cls.__recursively_save_dict_contents_to_group__(h5file, path + key + '/', item)
-            # other types cannot be saved and will result in an error
+            # attempt to convert to a numpy array
             else:
-                raise ValueError('Cannot save %s type.' % type(item))
+                h5file[path + key] = np.asarray(item)
+                if not np.array_equal(h5file[path + key].value, item):
+                    raise ValueError('The data representation in the HDF5 file does not match the original dict.')
+            # other types cannot be saved and will result in an error
+            # else:
+            #     raise ValueError('Cannot save %s type.' % type(item))
 
     ## Load a hdf5 file
     @classmethod

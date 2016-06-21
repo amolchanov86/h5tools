@@ -23,6 +23,7 @@ import h5py
 import numpy as np
 from random import shuffle
 
+
 ## indxClass
 class trainIndxClass:
     def __init__(self, name, train, val, test):
@@ -318,6 +319,12 @@ class imgtransferHDF5load(HDF5load):
         feat  = self.f['/feat/img'][indices, :]
         label = self.f['/label/hardlabel'][indices, :]
         softlabel = self.f['/label/softlabel'][indices, :]
+
+        if len(indices) == 1:
+            feat = np.expand_dims(feat, axis=0)
+            label = np.expand_dims(label, axis=0)
+            softlabel = np.expand_dims(softlabel, axis=0)
+
         return feat, (label,softlabel)
 
     ## Getting feature/label shapes
