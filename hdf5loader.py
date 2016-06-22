@@ -133,6 +133,12 @@ class HDF5load:
             self.nxt_index = self.nxt_index_all
             self.mode_indx = self.all_indx
             self.epoch_end = self.epoch_end_all
+        # print 'Mode config: '
+        # print ' mode_cur = ', self.mode_cur
+        # print ' epoch = ', self.epoch
+        # print ' nxt_indx = ', self.nxt_index
+        # print ' mode_indx = ', self.mode_indx
+        # print ' epoch_end = ', self.epoch_end
 
     ## Function returns the current mode (train/val/test)
     def getMode(self):
@@ -284,7 +290,7 @@ class HDF5load:
             epoch_changed = 1
         else:
             self.nxt_index[0] = end_indx
-        print 'start_indx = ', start_indx, ' end_indx = ', end_indx, ' epoch = ', self.epoch[0], ' epoch_changed = ', epoch_changed
+        print 'epoch = ', self.epoch[0], 'start_indx = ', start_indx, ' end_indx = ', end_indx, ' epoch_changed = ', epoch_changed
         return (self.getData( self.mode_indx[start_indx:end_indx] )), epoch_changed
 
     ## Functions to make this class iterable
@@ -335,6 +341,8 @@ class imgtransferHDF5load(HDF5load):
         feat_sample, label_sample = self.getData([1])
         return feat_sample.shape, label_sample[0].shape, label_sample[1].shape
 
+
+## Main function to test functionality
 def main(argv=None):
     dataset = pokeHDF5load('poke_alldata.h5')
 
