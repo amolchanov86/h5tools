@@ -341,6 +341,30 @@ class imgtransferHDF5load(HDF5load):
         feat_sample, label_sample = self.getData([1])
         return feat_sample.shape, label_sample[0].shape, label_sample[1].shape
 
+## Class for training knowledge transfer of image segmentation
+class imgTransfLogitHDF5load(HDF5load):
+    ## Function returns features and data given set of indices
+    # the function should be overloaded in a specific class to extract proper feature sets
+    def getData(self, indices):
+        feat = self.f['/feat/img'][indices, :]
+        label = self.f['/label/hardlabel'][indices, :]
+        softlabel = self.f['/label/logit'][indices, :]
+
+        if len(feat.shape) < 4:
+            feat = np.expand_dims(feat, axis=0)
+            label = np.expand_dims(label, axis=0)
+            softlabel = np.expand_dims(softlabel, axis=0)
+            # print 'Indices = ', indices, ' Shapes = ', feat.shape, label.shape, softlabel.shape
+
+        return feat, (label, softlabel)
+
+    ## Getting feature/label shapes
+    # there is a chance one would have to change these too in case
+    # overloaded getData would return not a numpy array
+    def getShapes(self):
+        feat_sample, label_sample = self.getData([1])
+        return feat_sample.shape, label_sample[0].shape, label_sample[1].shape
+
 
 ## Main function to test functionality
 def main(argv=None):
