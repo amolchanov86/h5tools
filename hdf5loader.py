@@ -18,6 +18,7 @@
 
 import sys
 import getopt
+import argparse
 
 import h5py
 import numpy as np
@@ -45,7 +46,7 @@ class trainIndxClass:
 
 ## pokeHDF5load
 # loads data specific for the point of contact localization projectobject
-class HDF5load:
+class HDF5load(object):
     ## Member variables that can be read and modified directly
     # batch_size - default size of the retrieved batch
 
@@ -97,12 +98,19 @@ class HDF5load:
         self.nxt_index_all = np.array([0])
         self.epoch_end_all = np.array([0])
 
+        # Initialize extra variables (extend it in cheldren's class)
+        self.initVars()
+
         # Reset current internal state for batch extraction and set 0 index set
         self.setCrossval(0, mode='train')
 
         # Set batch size
         self.batch_size = 32
 
+        return
+
+    ## Function for extensions (to initialize some additional variables added by children
+    def initVars(self):
         return
 
     ## Function sets the current mode (train/val/test) to make the object iterate through appropriate set
@@ -170,9 +178,6 @@ class HDF5load:
         else:
             self.cur_crossindx = name
 
-        # Reset epochs and indices
-        self.resetIndx()
-
         # self.train_indx = shuffle(  self.crossval_indx[self.cur_crossindx].train )
         self.train_indx = self.crossval_indx[self.cur_crossindx].train
         self.train_indx = np.ndarray.astype(self.train_indx, int)
@@ -180,6 +185,9 @@ class HDF5load:
         self.test_indx  = self.crossval_indx[self.cur_crossindx].test
         self.all_indx   = np.array(range(0, self.getSampNum() ))
         self.all_indx   = self.all_indx.flatten()
+
+        # Reset epochs and indices
+        self.resetIndx()
 
         if mode == None:
             self.setMode(self.mode_cur)
@@ -309,6 +317,84 @@ class HDF5load:
         self.f.close()
 
 
+## The same as HDF5load, but
+# when extracting batches it randomizes indices in the batch
+# NOTES:
+# self.nxt_index will not be changed in this class
+class HDF5loadRandom(HDF5load):
+    ## Function sets crossvalidation set by indx (if provided numerical value) or name (if semantic name is known)
+    def setCrossval(self, name, mode=None):
+        if isinstance(name, str):
+            self.cur_crossindx = self.crossval_names[name]
+        else:
+            self.cur_crossindx = name
+
+        print 'crossindx = ', self.cur_crossindx
+        self.train_indx = self.crossval_indx[self.cur_crossindx].train
+        self.train_indx = np.ndarray.astype(self.train_indx, int)
+        self.val_indx   = self.crossval_indx[self.cur_crossindx].val
+        self.test_indx  = self.crossval_indx[self.cur_crossindx].test
+        self.all_indx   = np.array(range(0, self.getSampNum() ))
+        self.all_indx   = self.all_indx.flatten()
+
+        self.remain_indx_train = [self.train_indx.copy()]
+        self.remain_indx_val   = [self.val_indx.copy()]
+        self.remain_indx_test  = [self.test_indx.copy()]
+        self.remain_indx_all   = [self.all_indx.copy()]
+
+        # Reset epochs and indices
+        self.resetIndx()
+
+        if mode == None:
+            self.setMode(self.mode_cur)
+        else:
+            self.setMode(mode)
+
+
+    ## Function sets the current mode (train/val/test) to make the object iterate through appropriate set
+    # The function creates important aliases
+    def setMode(self, mode='train', reset=False):
+        HDF5load.setMode(self, mode=mode, reset=reset)
+        mode = mode.lower()
+
+        if mode == 'train':
+            self.remain_indx = self.remain_indx_train
+        elif mode == 'val':
+            self.remain_indx = self.remain_indx_val
+        elif mode == 'test':
+            self.remain_indx = self.remain_indx_test
+        elif mode == 'all':
+            self.remain_indx = self.remain_indx_all
+
+    ## The function returns the next training batch
+    def nxtBatch(self, batch_size):
+        epoch_changed = 0
+        population_size = self.remain_indx[0].size
+
+        if batch_size >= population_size:
+            epoch_changed = 1
+            batch_indices = self.remain_indx[0]
+            # Refill the population of indices
+            self.remain_indx[0] = self.mode_indx.copy()
+            batch_size = population_size
+            self.epoch[0] += 1
+        else:
+            batch_indices  = np.random.choice(self.remain_indx[0], size=batch_size, replace=False)
+            batch_indices = np.sort(batch_indices)
+            self.remain_indx[0] = np.setdiff1d(self.remain_indx[0], batch_indices)
+
+        return (self.getData(batch_indices)), epoch_changed
+
+    def resetIndx(self):
+        HDF5load.resetIndx(self)
+        self.remain_indx_train[0] = self.train_indx.copy()
+        self.remain_indx_val[0]   = self.val_indx.copy()
+        self.remain_indx_test[0]  = self.test_indx.copy()
+        self.remain_indx_all[0]   = self.all_indx.copy()
+
+
+
+#--------------------------------------------------------------------------------------------------
 class pokeHDF5load(HDF5load):
     ## Function returns features and data given set of indices
     # the function should be overloaded in a specific class to extract proper feature sets
@@ -365,23 +451,74 @@ class imgTransfLogitHDF5load(HDF5load):
         feat_sample, label_sample = self.getData([1])
         return feat_sample.shape, label_sample[0].shape, label_sample[1].shape
 
+## Class for training knowledge transfer of image segmentation
+class intFeatHDF5load(HDF5load):
+    ## Function returns features and data given set of indices
+    # the function should be overloaded in a specific class to extract proper feature sets
+    def getData(self, indices):
+        feat = self.f['/feat/img'][indices, :]
+        label = self.f['/label/hardlabel'][indices, :]
+        softlabel = self.f['/label/logit'][indices, :]
+        intfeat1 = self.f['/label/squeeze2'][indices, :]
+        intfeat2 = self.f['/label/squeeze4'][indices, :]
+        intfeat3 = self.f['/label/squeeze6'][indices, :]
+
+        if len(feat.shape) < 4:
+            feat = np.expand_dims(feat, axis=0)
+            label = np.expand_dims(label, axis=0)
+            softlabel = np.expand_dims(softlabel, axis=0)
+            intfeat1 = np.expand_dims(intfeat1, axis=0)
+            intfeat2 = np.expand_dims(intfeat2, axis=0)
+            intfeat3 = np.expand_dims(intfeat3, axis=0)
+            # print 'Indices = ', indices, ' Shapes = ', feat.shape, label.shape, softlabel.shape
+
+        return feat, (label, softlabel, intfeat1, intfeat2, intfeat3)
+
+    def getShapes(self):
+        feat_sample, label_sample  = self.getData([1])
+        return feat_sample.shape, label_sample[0].shape, label_sample[1].shape
+
 
 ## Main function to test functionality
 def main(argv=None):
-    dataset = pokeHDF5load('poke_alldata.h5')
+    parser = argparse.ArgumentParser()
+    # Required arguments: input and output files.
+    parser.add_argument(
+        "-i", "--in_file",
+        default="data.h5",
+        help="dataset filename"
+    )
 
-    for cross_i in range(0,2):
-        dataset.setCrossval(cross_i)
-        print '--------------------------'
-        print 'dataset indx changed to ', cross_i
-        print 'train_indx:', dataset.train_indx, 'type = ', type(dataset.train_indx)
-        print 'val_indx:', dataset.val_indx
-        print 'test_indx', dataset.test_indx
+    args = parser.parse_args()
+    dataset = HDF5loadRandom(args.in_file)
+    dataset.batch_size = 1
 
-    # for batch_i in range(0,10):
-    #     print 'Batch = ', batch_i
-    #     batch = dataset.nxtBatch(100)
-    #     print batch
+    # for cross_i in range(0,2):
+    #     dataset.setCrossval(cross_i)
+    cross_i = 0
+    print '--------------------------'
+    print 'dataset indx changed to ', cross_i
+    print 'train_indx:', dataset.train_indx, 'type = ', type(dataset.train_indx)
+    print 'val_indx:', dataset.val_indx
+    print 'test_indx', dataset.test_indx
+
+
+    change_mode_every = 10
+    iter = -1
+    modes = ['train', 'val', 'test']
+    mode_indx = -1
+    while dataset.epoch_train[0] < 10:
+        for data,label in dataset:
+            iter += 1
+            print 'remain_indices = ', dataset.remain_indx
+            if iter % change_mode_every == 0:
+                print '______________________________________________________________________________'
+                mode_indx += 1
+                print 'Old_mode =', dataset.getMode(), ' remain_indices', dataset.remain_indx
+                dataset.setMode(modes[mode_indx % 3])
+                print 'New_mode =', dataset.getMode(), ' remain_indices', dataset.remain_indx
+                print '______________________________________________________________________________'
+
 
 if __name__ == "__main__":
     main()
