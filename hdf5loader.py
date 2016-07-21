@@ -382,6 +382,7 @@ class HDF5loadRandom(HDF5load):
             batch_indices  = np.random.choice(self.remain_indx[0], size=batch_size, replace=False)
             batch_indices = np.sort(batch_indices)
             self.remain_indx[0] = np.setdiff1d(self.remain_indx[0], batch_indices)
+        batch_indices = batch_indices.tolist()
 
         return (self.getData(batch_indices)), epoch_changed
 
