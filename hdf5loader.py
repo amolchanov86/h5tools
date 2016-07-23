@@ -60,7 +60,7 @@ class HDF5load(object):
 
     ## Constructor
     # @param filename path/name for the hdf5 file
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, crossval_indx_set=0):
         self.f = h5py.File(filename, "r")
 
         #Reading indices for individual crossvalidations
@@ -102,7 +102,7 @@ class HDF5load(object):
         self.initVars()
 
         # Reset current internal state for batch extraction and set 0 index set
-        self.setCrossval(0, mode='train')
+        self.setCrossval(crossval_indx_set, mode='train')
 
         # Set batch size
         self.batch_size = 32
@@ -186,6 +186,8 @@ class HDF5load(object):
         self.all_indx   = np.array(range(0, self.getSampNum() ))
         self.all_indx   = self.all_indx.flatten()
 
+        print 'H5 loader: Crossval name = ', self.getCrossvalName()
+
         # Reset epochs and indices
         self.resetIndx()
 
@@ -193,6 +195,10 @@ class HDF5load(object):
             self.setMode(self.mode_cur)
         else:
             self.setMode(mode)
+
+    ## Get crossval name
+    def getCrossvalName(self):
+        return self.f['/crossval_names'][self.cur_crossindx]
 
     ## Shuffle current indices
     def indxShuffle(self):
@@ -329,7 +335,8 @@ class HDF5loadRandom(HDF5load):
         else:
             self.cur_crossindx = name
 
-        print 'crossindx = ', self.cur_crossindx
+        print 'H5 loader: Crossval name = ', self.getCrossvalName()
+
         self.train_indx = self.crossval_indx[self.cur_crossindx].train
         self.train_indx = np.ndarray.astype(self.train_indx, int)
         self.val_indx   = self.crossval_indx[self.cur_crossindx].val
@@ -357,6 +364,7 @@ class HDF5loadRandom(HDF5load):
         HDF5load.setMode(self, mode=mode, reset=reset)
         mode = mode.lower()
 
+        print 'H5 loader: switched to mode ', mode
         if mode == 'train':
             self.remain_indx = self.remain_indx_train
         elif mode == 'val':
@@ -365,6 +373,7 @@ class HDF5loadRandom(HDF5load):
             self.remain_indx = self.remain_indx_test
         elif mode == 'all':
             self.remain_indx = self.remain_indx_all
+        # print 'H5 loader: indx set = ', self.remain_indx
 
     ## The function returns the next training batch
     def nxtBatch(self, batch_size):
