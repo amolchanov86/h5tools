@@ -364,7 +364,7 @@ class HDF5loadRandom(HDF5load):
         HDF5load.setMode(self, mode=mode, reset=reset)
         mode = mode.lower()
 
-        print 'H5 loader: switched to mode ', mode
+        # print 'H5 loader: switched to mode ', mode
         if mode == 'train':
             self.remain_indx = self.remain_indx_train
         elif mode == 'val':
