@@ -107,6 +107,9 @@ class HDF5load(object):
         # Set batch size
         self.batch_size = 32
 
+        # Some auxiliary variables
+        self.last_sampindx = [] # last index set of samples requested
+
         return
 
     ## Function for extensions (to initialize some additional variables added by children
@@ -305,6 +308,7 @@ class HDF5load(object):
         else:
             self.nxt_index[0] = end_indx
         print 'epoch = ', self.epoch[0], 'start_indx = ', start_indx, ' end_indx = ', end_indx, ' epoch_changed = ', epoch_changed
+        self.last_sampindx = self.mode_indx[start_indx:end_indx].tolist()
         return (self.getData( self.mode_indx[start_indx:end_indx] )), epoch_changed
 
     ## Functions to make this class iterable
@@ -392,7 +396,7 @@ class HDF5loadRandom(HDF5load):
             batch_indices = np.sort(batch_indices)
             self.remain_indx[0] = np.setdiff1d(self.remain_indx[0], batch_indices)
         batch_indices = batch_indices.tolist()
-
+        self.last_sampindx = batch_indices
         return (self.getData(batch_indices)), epoch_changed
 
     def resetIndx(self):
@@ -481,6 +485,7 @@ class intFeatHDF5load(HDF5load):
             intfeat2 = np.expand_dims(intfeat2, axis=0)
             intfeat3 = np.expand_dims(intfeat3, axis=0)
             # print 'Indices = ', indices, ' Shapes = ', feat.shape, label.shape, softlabel.shape
+        # print "Shapes: int1 =", intfeat1.shape, ' int2 = ', intfeat2.shape, ' int3 = ', intfeat3.shape
 
         return feat, (label, softlabel, intfeat1, intfeat2, intfeat3)
 
