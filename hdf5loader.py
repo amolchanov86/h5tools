@@ -409,16 +409,8 @@ class HDF5loadRandom(HDF5load):
 
 
 #--------------------------------------------------------------------------------------------------
-class pokeHDF5load(HDF5load):
-    ## Function returns features and data given set of indices
-    # the function should be overloaded in a specific class to extract proper feature sets
-    def getData(self, indices):
-        feat  = self.f['/feat/'  + self.feat_names[0]  ][indices, :]
-        label = self.f['/label/' + self.label_names[0] ][indices, :]
-        return feat, label
-
 ## Class for training knowledge transfer of image segmentation
-class imgtransferHDF5load(HDF5load):
+class imgtransferHDF5load(HDF5loadRandom):
     ## Function returns features and data given set of indices
     # the function should be overloaded in a specific class to extract proper feature sets
     def getData(self, indices):
@@ -442,7 +434,7 @@ class imgtransferHDF5load(HDF5load):
         return feat_sample.shape, label_sample[0].shape, label_sample[1].shape
 
 ## Class for training knowledge transfer of image segmentation
-class imgTransfLogitHDF5load(HDF5load):
+class imgTransfLogitHDF5load(HDF5loadRandom):
     ## Function returns features and data given set of indices
     # the function should be overloaded in a specific class to extract proper feature sets
     def getData(self, indices):
