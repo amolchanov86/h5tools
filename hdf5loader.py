@@ -406,7 +406,69 @@ class HDF5loadRandom(HDF5load):
         self.remain_indx_test[0]  = self.test_indx.copy()
         self.remain_indx_all[0]   = self.all_indx.copy()
 
+# --------------------------------------------------------------------------------------------------
+## Wrapping MNIST
+class MNISTload(object):
+    def __init__(self, filename = None, crossval_indx_set = None):
+        from tensorflow.examples.tutorials.mnist import input_data
+        self.mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
+
+    @property
+    def epoch(self):
+        """
+        Sample statistics/diagnostics.
+        :return: (List) list of names of diagnostics calculated per sample
+        """
+        return self.dataset_cur.epochs_completed
+
+    def setMode(self, mode):
+        if mode == 'train':
+            self.dataset_cur = self.mnist.train
+        elif mode == 'val':
+            self.dataset_cur = self.mnist.validation
+        elif mode == 'test':
+            self.dataset_cur = self.mnist.test
+        elif mode == 'all':
+            print '!!!!!!!!!!!!!!!! WARNING: MNIST ALL = MNIST TRAIN'
+            self.dataset_cur = self.mnist.train
+
+    def nextBatch(self, batch_size):
+        batch = self.dataset_cur.next_batch(batch_size)
+        self.last_indices_requested \
+            = range(self.dataset_cur._index_in_epoch, self.dataset_cur._index_in_epoch + batch_size)
+        return np.reshape(batch[0], newshape=[-1,28,28,1]), batch[1]
+
+    def getShapes(self):
+        return [28,28,1], [1]
+
+    def getTrainSamplesNum(self):
+        return self.mnist.train.num_examples
+
+    def getValSamplesNum(self):
+        return self.mnist.validation.num_examples
+
+    def getTestSamplesNum(self):
+        return self.mnist.test.num_examples
+
+    def getSampNum(self):
+        return self.getTestSamplesNum + self.getValSamplesNum() + self.getTrainSamplesNum()
+
+    def resetIndx(self):
+        self.print_notimplemented()
+        return None
+
+    def getOutNum(self):
+        return 10
+
+    def getLabelType(self):
+        return type(0)
+
+    def getLabelVal(self):
+        return range(0,10)
+
+    def print_notimplemented(self):
+        print '!!!!!!!!!!!!!!!! WARNING: NOT IMPLEMENTED'
 
 #--------------------------------------------------------------------------------------------------
 ## Class for training knowledge transfer of image segmentation
