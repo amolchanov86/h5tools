@@ -413,6 +413,19 @@ class MNISTload(object):
         from tensorflow.examples.tutorials.mnist import input_data
         self.mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
+        self.batch_size = 64
+        self.epoch_train = [0]
+        self.epoch_val  = [0]
+        self.epoch_test = [0]
+        self.setMode('train')
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+
+    @batch_size.setter
+    def batch_size(self, value):
+        self._batch_size = value
 
     @property
     def epoch(self):
@@ -425,19 +438,31 @@ class MNISTload(object):
     def setMode(self, mode):
         if mode == 'train':
             self.dataset_cur = self.mnist.train
+            self.epoch_prev = self.epoch_train
         elif mode == 'val':
             self.dataset_cur = self.mnist.validation
+            self.epoch_prev = self.epoch_val
         elif mode == 'test':
             self.dataset_cur = self.mnist.test
+            self.epoch_prev = self.epoch_test
         elif mode == 'all':
             print '!!!!!!!!!!!!!!!! WARNING: MNIST ALL = MNIST TRAIN'
             self.dataset_cur = self.mnist.train
+            self.epoch_prev = self.epoch_train
 
     def nextBatch(self, batch_size):
         batch = self.dataset_cur.next_batch(batch_size)
+        labels = np.argmax(batch[1], axis=1)
         self.last_indices_requested \
             = range(self.dataset_cur._index_in_epoch, self.dataset_cur._index_in_epoch + batch_size)
-        return np.reshape(batch[0], newshape=[-1,28,28,1]), batch[1]
+
+        if self.epoch_prev[0] != self.epoch:
+            epoch_changed = True
+        else:
+            epoch_changed = False
+        self.epoch_prev[0] = self.epoch
+
+        return (np.reshape(batch[0], newshape=[-1,28,28,1]), labels), epoch_changed
 
     def getShapes(self):
         return [28,28,1], [1]
@@ -452,7 +477,7 @@ class MNISTload(object):
         return self.mnist.test.num_examples
 
     def getSampNum(self):
-        return self.getTestSamplesNum + self.getValSamplesNum() + self.getTrainSamplesNum()
+        return self.getTestSamplesNum() + self.getValSamplesNum() + self.getTrainSamplesNum()
 
     def resetIndx(self):
         self.print_notimplemented()
@@ -469,6 +494,16 @@ class MNISTload(object):
 
     def print_notimplemented(self):
         print '!!!!!!!!!!!!!!!! WARNING: NOT IMPLEMENTED'
+
+    ## Functions to make this class iterable
+    def __iter__(self):
+        return self
+
+    def next(self):
+        feat_label, epoch_end = self.nextBatch(self.batch_size)
+        if epoch_end:
+            raise StopIteration
+        return feat_label[0], feat_label[1]
 
 #--------------------------------------------------------------------------------------------------
 ## Class for training knowledge transfer of image segmentation
