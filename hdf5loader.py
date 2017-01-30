@@ -450,7 +450,7 @@ class MNISTload(object):
             self.dataset_cur = self.mnist.train
             self.epoch_prev = self.epoch_train
 
-    def nextBatch(self, batch_size):
+    def nxtBatch(self, batch_size):
         batch = self.dataset_cur.next_batch(batch_size)
         labels = np.argmax(batch[1], axis=1)
         self.last_indices_requested \
@@ -500,7 +500,7 @@ class MNISTload(object):
         return self
 
     def next(self):
-        feat_label, epoch_end = self.nextBatch(self.batch_size)
+        feat_label, epoch_end = self.nxtBatch(self.batch_size)
         if epoch_end:
             raise StopIteration
         return feat_label[0], feat_label[1]
