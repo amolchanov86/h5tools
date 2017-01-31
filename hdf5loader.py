@@ -407,7 +407,25 @@ class HDF5loadRandom(HDF5load):
         self.remain_indx_all[0]   = self.all_indx.copy()
 
 # --------------------------------------------------------------------------------------------------
-## Wrapping MNIST
+# Simple classification task
+class ClassifH5LR(HDF5loadRandom):
+    """
+    Loader of data from HDF5 file with 1d labels
+    """
+    def getData(self, indices):
+        feat  = self.f['/feat/'  + self.feat_names[0]][indices, :]
+        label = self.f['/label/' + self.label_names[0]][indices]
+        return feat, label
+
+    def getShapes(self):
+        feat_sample, label_sample = self.getData([1])
+        return feat_sample.shape[1:], label_sample.shape
+
+    def getLabelVal(self):
+        return self.f['/label_values/' + self.label_names[0]]
+
+# --------------------------------------------------------------------------------------------------
+# Wrapping MNIST
 class MNISTload(object):
     def __init__(self, filename = None, crossval_indx_set = None):
         from tensorflow.examples.tutorials.mnist import input_data
