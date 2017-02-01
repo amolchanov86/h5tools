@@ -415,6 +415,7 @@ class ClassifH5LR(HDF5loadRandom):
     def getData(self, indices):
         feat  = self.f['/feat/'  + self.feat_names[0]][indices, :]
         label = self.f['/label/' + self.label_names[0]][indices]
+        self.last_indices_requested = indices
         return feat, label
 
     def getShapes(self):
@@ -423,6 +424,9 @@ class ClassifH5LR(HDF5loadRandom):
 
     def getLabelVal(self):
         return self.f['/label_values/' + self.label_names[0]]
+
+    def getOutNum(self):
+        return len(self.getLabelVal())
 
 # --------------------------------------------------------------------------------------------------
 # Wrapping MNIST
