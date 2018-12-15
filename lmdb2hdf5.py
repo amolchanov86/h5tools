@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-# The module loads 2 LMDB files (containing images and by pixel labels) and saves them in a single HDF5 file
-
+"""
+The module converts LMDB files containing images into an HDF5 file.
+The user must provide two LMDB files: 1st file containing images and 2nd file containing by-pixel labels.
+"""
 # Notes:
 # TensorFlow image dimensions order : [batch, height, width, channels]
 

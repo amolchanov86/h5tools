@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-# The module loads 2 LMDB files (containing images and by pixel labels) and saves them in a single HDF5 file
+"""
+THe module saves images + labels into HDF5 file
+"""
 
 # Notes:
 # TensorFlow image dimensions order : [batch, height, width, channels]
@@ -11,8 +13,8 @@ import cv2
 import h5py
 import argparse
 
-# My stuff
-import fileutils as fu
+# My modules
+import fileutils as fu # See: https://github.com/amolchanov86/fileutils 
 
 
 def main (argv):
@@ -56,7 +58,8 @@ def main (argv):
     show_img = args.visualize
     samp_max = args.samples_maxnum
 
-    # Parameters
+    ###########################################################
+    ## Parameters
     train_val_test_ratio = np.array( [0.8, 0.08, 0.12])
     #Renormalize ratios
     train_val_test_ratio /= train_val_test_ratio.sum()
@@ -64,21 +67,13 @@ def main (argv):
     lbl_img_scale = 50
     crossval_num = 1
 
-
-    # Get extensions
+    # Get file extensions
     extensions = args.extensions.split(',')
     img_list = fu.find_files_ext(args.in_dir, args.extensions)
     label_list = fu.find_files_ext(args.label_dir, args.extensions)
 
     print img_list
     print label_list
-
-
-
-    ###########################################################
-    # TODO
-    # - get list of
-
 
     ###########################################################
     ## Filling HDF5 file
@@ -97,7 +92,6 @@ def main (argv):
 
     crossval_names_dset = h5datafile.create_dataset("/crossval_names", (crossval_num,), dtype='S2')
     crossval_names_dset[0] = '0'
-
 
     # Creating train/val/test indices
     remain_indx_set = np.array(range(samples_num))

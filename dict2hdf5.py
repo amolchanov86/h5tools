@@ -5,12 +5,14 @@ import h5py
 import os
 
 class dict2h5(object):
-    ## The class can save and load python dictionary into a hdf5 file
+    """
+    The class can save and load python dictionary into a hdf5 file
+    """
 
     ## Saving a dictionary
     @classmethod
     def save(cls, dic, filename=None, h5file=None):
-        # The following check is not necessary
+        ## The following check is not necessary
         # if os.path.exists(filename):
         #     raise ValueError('File %s exists, will not overwrite.' % filename)
         if filename is None:
@@ -59,13 +61,17 @@ class dict2h5(object):
     ## Load a hdf5 file
     @classmethod
     def load(cls, filename):
-        """..."""
+        """
+        Loads HDF5 content into a dictionary
+        """
         with h5py.File(filename, 'r') as h5file:
             return cls.__recursively_load_dict_contents_from_group__(h5file, '/')
 
     @classmethod
     def __recursively_load_dict_contents_from_group__(cls, h5file, path):
-        """..."""
+        """
+        A helper function to for recursive loading into a dictionary
+        """
         ans = {}
         for key, item in h5file[path].items():
             if isinstance(item, h5py._hl.dataset.Dataset):
@@ -74,7 +80,7 @@ class dict2h5(object):
                 ans[key] = cls.__recursively_load_dict_contents_from_group__(h5file, path + key + '/')
         return ans
 
-# a test
+## Test
 if __name__ == "__main__":
 
     filename = 'foo.hdf5'
